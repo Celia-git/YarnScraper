@@ -18,4 +18,5 @@ Command line program takes optional args: *amount*, *material*, and *weight*.  P
 - in terminal, navigate to **yarn_scraper**
 - run `pip install -r requirements.txt`
 - run the program with the command (args optional): `python yarn_scraper.py [*arg1*] [*arg2*] [*arg3*]`
-
+     - ex: to run the program and print the 12 cheapest-by-weight listings of cotton, acrylic, and linen, and only search for the fine and superfine yarns, print:
+     - `python yarn_scraper.py 12 c-a-l 1-2`  
