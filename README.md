@@ -11,6 +11,8 @@ Command line program takes optional args: *amount*, *material*, and *weight*.  P
 3. **weight**: thickness of the yarn to sort by ("command":"value")
      -  integer 0-6 (or all) "all":"all", "0":"lace", "1":"superfine", "2":"fine", "3":"light", "4":"medium", "5":"bulky", "6":"superbulky"
      -  default: all
+-- To run multiple arguments for arg2 or arg3, separate them with hyphen. ie: `10 w-mw-sw 0-1-2`
+
 ### To run on windows:
 - download repository
 - in terminal, navigate to **yarn_scraper**
