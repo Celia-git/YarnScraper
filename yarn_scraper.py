@@ -9,20 +9,30 @@ URL = "https://www.yarn.com/categories/yarn-by-type?%s"
 
 class Listing():
     def __init__(self, name, description, price, product_link, sale):
-        self.name = name
+        
         self.price = float(price.strip("$"))
         self.product_link = product_link
         self.sale = sale
         self.materials = self.get_material(description)
         self.thickness = self.get_thickness(description)
+        self.name = self.get_name(product_link)
         (self.length, self.mass) = self.get_dimensions(description)
         # Rate: price per 100g
         self.rate = self.get_rate()
     
     # Return String
     def __str__(self):
-        return "%s,\n %s,\n \t%s,\n \t%s weight,\n \t%im, \t%ig, \t$%.2f, \t$%.2f/100g,\t%s" % (self.name, self.product_link, self.materials, self.thickness, self.length, self.mass, self.price, self.rate, self.sale)
+        return "\t\t%s:\n %s,\n \t%s,\n \t%s weight,\n \t%im, \t%ig, \t$%.2f, \t$%.2f/100g,\t%s\n" % (self.name, self.product_link, self.materials, self.thickness, self.length, self.mass, self.price, self.rate, ['Regular Price', 'Sale Price'][self.sale])
 
+    # Return name 
+    def get_name(self, product_link):
+        link = product_link.split("/")
+        i= 0
+        for i in range(len(link)):
+            if link[i] == "products":
+                listing_name = link[i+1]
+                return listing_name.replace("-", " ").title()
+            i += 1
 
     # Return Tuple:Float dimensions: len (meters) and mass (100 grams) 
     def get_dimensions(self, description):
@@ -92,11 +102,11 @@ def getPages(materials, weights):
               "cotton": ["Cotton"], "linen": ["Linen"], "bamboo":["Bamboo"], "lace":["Lace | 2 Ply", "Light Fingering"], "superfine":["Fingering"],
               "fine":["Sport"], "light":["DK | Light Worsted"], "medium":["Worsted", "Aran"], "bulky":["Bulky", "Heavy Worsted"], "superbulky":["Super Bulky", "Super Bulky | Super Chunky"]}
 
-    if materials is not ["all"]:
+    if not (materials == ["all"]):
         for material in materials: 
             for value in params[material]:
                 filters.append(("filter-fibers.en-US", value))
-    if weights is not ["all"]:
+    if not (weights == ["all"]):
         for weight in weights: 
             for value in params[weight]:
                 filters.append(("filter-yarnWeight.en-US", value))
@@ -130,60 +140,63 @@ def getListings(materials, weights):
     pages = getPages(materials, weights)
 
     listings = []
-
     for page in pages:
         # Iterate all products in grid
-        for listing_tag in page.children:
-            if type(listing_tag)==Tag:
+        for container in page.children:
+            if type(container)==Tag:
+                if container["class"]==["products__grid-item"]:
+                    for listing_tag in container.children:
+                        if type(listing_tag)==Tag:
+                            if listing_tag.has_attr("data-testid"):
 
-                # Product Listing
-                if listing_tag["data-testid"]=="product-card":
-                    attributes = {"name":"", "description":"", "price":"", "product_link":"", "sale":False}
+                                # Product Listing
+                                if listing_tag["data-testid"]=="product-card":
+                                    attributes = {"name":"", "description":"", "price":"", "product_link":"", "sale":False}
 
-                    # Get product attributes 
-                    for tag in listing_tag.children:
-                        if type(tag)==Tag:
+                                    # Get product attributes 
+                                    for tag in listing_tag.children:
+                                        if type(tag)==Tag:
 
-                            # Get name, product_link, description
-                            if (tag.name=="a" and "data-testid" in tag.attrs):
-                                if tag["data-testid"]=="product-link":
-                                    # Link
-                                    attributes["product_link"]=tag["href"]
-                                    for child_tag in tag.children:
-                                        if type(child_tag)==Tag:
+                                            # Get name, product_link, description
+                                            if (tag.name=="a" and "data-testid" in tag.attrs):
+                                                if tag["data-testid"]=="product-link":
+                                                    # Link
+                                                    attributes["product_link"]=tag["href"]
+                                                    for child_tag in tag.children:
+                                                        if type(child_tag)==Tag:
 
-                                            if ("class" in child_tag.attrs):
-                                                # Name
-                                                if child_tag.name=="h2":
-                                                    if child_tag["class"]==["product-card__title"]:
-                                                        attributes["name"]=child_tag.string.strip()
-                                                # Description
-                                                elif child_tag.name=="p":
-                                                    if child_tag["class"]==["product-card__subtitle"]:
-                                                        attributes["description"]=child_tag.string.strip()
-                            
-                            # Get price and sale
-                            elif (tag.name=="div" and "class" in tag.attrs):
-                                if "product-price" in tag["class"]:
-                                    for child_tag in tag.descendants:
-                                        if type(child_tag)==Tag:
+                                                            if ("class" in child_tag.attrs):
+                                                                # Name
+                                                                if child_tag.name=="h2":
+                                                                    if child_tag["class"]==["product-card__title"]:
+                                                                        attributes["name"]=child_tag.string.strip()
+                                                                # Description
+                                                                elif child_tag.name=="p":
+                                                                    if child_tag["class"]==["product-card__subtitle"]:
+                                                                        attributes["description"]=child_tag.string.strip()
+                                            
+                                            # Get price and sale
+                                            elif (tag.name=="div" and "class" in tag.attrs):
+                                                if "product-price" in tag["class"]:
+                                                    for child_tag in tag.descendants:
+                                                        if type(child_tag)==Tag:
 
-                                            # get price and sale
-                                            if (child_tag.name=="span" or child_tag.name=="ins") and ("class" in child_tag.attrs):
+                                                            # get price and sale
+                                                            if (child_tag.name=="span" or child_tag.name=="ins") and ("class" in child_tag.attrs):
 
-                                                if (child_tag["class"]==["lc-price__regular"]):
-                                                    attributes["price"]=child_tag.text.strip()
-                                                    if "From\n" in attributes["price"]:
-                                                        attributes["price"] = attributes["price"].replace("From\n", "").strip()
-                                                elif  (child_tag["class"]==["lc-price__special"]):
-                                                    attributes["price"]=child_tag.contents[0].text.strip().replace("From ", "")
-                                                    
-                                                attributes["sale"]=(child_tag["class"]==["lc-price__special"])
+                                                                if (child_tag["class"]==["lc-price__regular"]):
+                                                                    attributes["price"]=child_tag.text.strip()
+                                                                    if "From\n" in attributes["price"]:
+                                                                        attributes["price"] = attributes["price"].replace("From\n", "").strip()
+                                                                elif  (child_tag["class"]==["lc-price__special"]):
+                                                                    attributes["price"]=child_tag.contents[0].text.strip().replace("From ", "")
+                                                                    
+                                                                attributes["sale"]=(child_tag["class"]==["lc-price__special"])
 
-            # Create new listing
-            newListing = Listing(attributes["name"], attributes["description"], attributes["price"], attributes["product_link"], attributes["sale"])
-            if not((newListing.length is None) or (newListing.mass is None)):
-                listings.append(newListing)
+                                # Create new listing
+                                newListing = Listing(attributes["name"], attributes["description"], attributes["price"], attributes["product_link"], attributes["sale"])
+                                if not((newListing.length is None) or (newListing.mass is None)):
+                                    listings.append(newListing)
 
     return listings
 
@@ -233,7 +246,7 @@ def getTopListings(amount, material, weight):
 '''
 if __name__=="__main__":
     printHelp = False
-    amount = 0
+    amount = 10
     material_key = {"all":"all","w":"wool", "mw":"merino wool", "sw":"specialty wool", "s":"silk", "a":"acrylic/synthetic", "c":"cotton", "l":"linen", "b":"bamboo"}
     weight_key = {"all":"all", "0":"lace", "1":"superfine", "2":"fine", "3":"light", "4":"medium", "5":"bulky", "6":"superbulky"}
             
@@ -264,10 +277,8 @@ if __name__=="__main__":
         for entry in arg3:
             if entry in weight_key.keys():
                 weights.append(weight_key[entry])
-
         # Get [amount] listings which fit condition, sorted by best rate. 
         topListings = getTopListings(amount, materials, weights)
-        
         # Print formatted listings
         for listing in topListings:
             if listing is not None:
